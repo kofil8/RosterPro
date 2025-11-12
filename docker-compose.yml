@@ -1,0 +1,92 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: rosterpro-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: roster_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rosterpro-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: rosterpro-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - rosterpro-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (uncomment when ready to deploy)
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: rosterpro-backend
+  #   environment:
+  #     NODE_ENV: development
+  #     PORT: 9001
+  #     DATABASE_URL: postgresql://postgres:postgres@postgres:5432/roster_db?schema=public
+  #     REDIS_URL: redis://redis:6379
+  #   ports:
+  #     - '9001:9001'
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   networks:
+  #     - rosterpro-network
+  #   volumes:
+  #     - ./backend:/app
+  #     - /app/node_modules
+  #   command: npm run dev
+
+  # Frontend (uncomment when ready to deploy)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: rosterpro-frontend
+  #   environment:
+  #     NEXT_PUBLIC_API_URL: http://localhost:9001/api
+  #     NEXT_PUBLIC_SOCKET_URL: http://localhost:9001
+  #   ports:
+  #     - '3000:3000'
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - rosterpro-network
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #     - /app/.next
+  #   command: npm run dev
+
+networks:
+  rosterpro-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

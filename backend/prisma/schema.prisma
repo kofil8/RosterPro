@@ -1,0 +1,235 @@
+// Prisma Schema for Roster & Payroll Management System
+// UK-based Care Agency Internal System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  ADMIN // Owner/Director
+  MANAGER // Schedulers
+  ACCOUNTANT // Finance team
+  EMPLOYEE // Carers, Babysitters
+}
+
+enum ShiftStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum AttendanceStatus {
+  PENDING // Awaiting approval
+  APPROVED // Manager approved
+  REJECTED // Rejected by manager
+}
+
+enum PayrollStatus {
+  DRAFT // Being prepared
+  PENDING_APPROVAL // Awaiting manager approval
+  APPROVED // Manager approved
+  PAID // Payment completed
+}
+
+// Models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String?
+  address   String?
+  role      UserRole @default(EMPLOYEE)
+  avatar    String?
+  isActive  Boolean  @default(true)
+
+  // Payroll Information
+  hourlyRate              Decimal @default(0) @db.Decimal(10, 2)
+  bankAccount             String? // Bank account details
+  nationalInsuranceNumber String? // NI Number for UK HMRC
+
+  // Relations
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Shifts assigned to user
+  shifts Shift[]
+
+  // Attendance records
+  attendances Attendance[]
+
+  // Payroll records
+  payrolls Payroll[]
+
+  // Refresh tokens
+  refreshTokens RefreshToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([email])
+}
+
+model Company {
+  id       String  @id @default(cuid())
+  name     String
+  email    String  @unique
+  phone    String?
+  address  String?
+  timezone String  @default("Europe/London")
+  logo     String?
+  isActive Boolean @default(true)
+
+  // Company Settings
+  overtimeMultiplier   Decimal @default(1.5) @db.Decimal(3, 2) // e.g., 1.5 for time-and-a-half
+  weeklyHoursThreshold Int     @default(40) // Hours before overtime applies
+
+  // Relations
+  users    User[]
+  rosters  Roster[]
+  payrolls Payroll[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+model Roster {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isPublished Boolean  @default(false)
+
+  // Relations
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  shifts Shift[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([startDate, endDate])
+}
+
+model Shift {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  clientName  String? // Name of client (elderly/child)
+  clientNotes String? // Special care instructions
+  notes       String?
+  status      ShiftStatus @default(SCHEDULED)
+
+  // Relations
+  rosterId String
+  roster   Roster @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+
+  assignedUserId String?
+  assignedUser   User?   @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  // Attendance tracking
+  attendance Attendance?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([rosterId])
+  @@index([assignedUserId])
+  @@index([startTime, endTime])
+}
+
+// Attendance tracking for actual work hours
+model Attendance {
+  id            String           @id @default(cuid())
+  clockIn       DateTime
+  clockOut      DateTime?
+  totalHours    Decimal?         @db.Decimal(5, 2) // Calculated hours worked
+  breakDuration Decimal          @default(0) @db.Decimal(4, 2) // Break time in hours
+  notes         String?
+  status        AttendanceStatus @default(PENDING)
+
+  // Relations
+  shiftId String @unique
+  shift   Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  approvedBy String? // Manager who approved
+  approvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([shiftId])
+  @@index([clockIn])
+}
+
+// Payroll records for salary calculations
+model Payroll {
+  id            String        @id @default(cuid())
+  periodStart   DateTime // Pay period start
+  periodEnd     DateTime // Pay period end
+  regularHours  Decimal       @db.Decimal(6, 2)
+  overtimeHours Decimal       @default(0) @db.Decimal(6, 2)
+  hourlyRate    Decimal       @db.Decimal(10, 2)
+  regularPay    Decimal       @db.Decimal(10, 2)
+  overtimePay   Decimal       @default(0) @db.Decimal(10, 2)
+  bonuses       Decimal       @default(0) @db.Decimal(10, 2)
+  deductions    Decimal       @default(0) @db.Decimal(10, 2)
+  netPay        Decimal       @db.Decimal(10, 2)
+  status        PayrollStatus @default(DRAFT)
+  notes         String?
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  approvedBy String? // Manager who approved
+  approvedAt DateTime?
+  paidAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([periodStart, periodEnd])
+  @@index([status])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
