@@ -1,7 +1,8 @@
 import { ApiResponse, AuthResponse } from "@/types";
 import axios, { AxiosError, AxiosInstance } from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001/api";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://rosterpro.onrender.com";
 
 class ApiClient {
   private client: AxiosInstance;
