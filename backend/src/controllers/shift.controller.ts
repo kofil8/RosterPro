@@ -1,34 +1,58 @@
-import { Response } from 'express';
-import prisma from '../config/database';
+import { Response } from "express";
+import prisma from "../config/database";
 import {
   successResponse,
   errorResponse,
   calculatePagination,
   isValidDateRange,
-  doDateRangesOverlap,
-} from '../utils/helpers';
-import { AuthRequest, CreateShiftDTO, UpdateShiftDTO, ShiftQueryParams } from '../types';
-import { UserRole, ShiftStatus } from '@prisma/client';
+} from "../utils/helpers";
+import {
+  AuthRequest,
+  CreateShiftDTO,
+  UpdateShiftDTO,
+  ShiftQueryParams,
+} from "../types";
+import { UserRole, ShiftStatus } from "@prisma/client";
 
 /**
  * Create shift
  */
-export const createShift = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createShift = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
-      res.status(401).json(errorResponse('Not authenticated', 'Authentication required'));
+      res
+        .status(401)
+        .json(errorResponse("Not authenticated", "Authentication required"));
       return;
     }
 
-    const { title, description, startTime, endTime, location, notes, rosterId, assignedUserId }: CreateShiftDTO =
-      req.body;
+    const {
+      title,
+      description,
+      startTime,
+      endTime,
+      location,
+      notes,
+      rosterId,
+      assignedUserId,
+    }: CreateShiftDTO = req.body;
 
     // Validate date range
     const start = new Date(startTime);
     const end = new Date(endTime);
 
     if (!isValidDateRange(start, end)) {
-      res.status(400).json(errorResponse('Invalid time range', 'Start time must be before end time'));
+      res
+        .status(400)
+        .json(
+          errorResponse(
+            "Invalid time range",
+            "Start time must be before end time"
+          )
+        );
       return;
     }
 
@@ -38,12 +62,21 @@ export const createShift = async (req: AuthRequest, res: Response): Promise<void
     });
 
     if (!roster) {
-      res.status(404).json(errorResponse('Roster not found', 'Roster does not exist'));
+      res
+        .status(404)
+        .json(errorResponse("Roster not found", "Roster does not exist"));
       return;
     }
 
     if (roster.companyId !== req.user.companyId) {
-      res.status(403).json(errorResponse('Access denied', 'You do not have access to this roster'));
+      res
+        .status(403)
+        .json(
+          errorResponse(
+            "Access denied",
+            "You do not have access to this roster"
+          )
+        );
       return;
     }
 
@@ -54,12 +87,23 @@ export const createShift = async (req: AuthRequest, res: Response): Promise<void
       });
 
       if (!user) {
-        res.status(404).json(errorResponse('User not found', 'Assigned user does not exist'));
+        res
+          .status(404)
+          .json(
+            errorResponse("User not found", "Assigned user does not exist")
+          );
         return;
       }
 
       if (user.companyId !== roster.companyId) {
-        res.status(400).json(errorResponse('Invalid user', 'User does not belong to the same company'));
+        res
+          .status(400)
+          .json(
+            errorResponse(
+              "Invalid user",
+              "User does not belong to the same company"
+            )
+          );
         return;
       }
 
@@ -83,7 +127,14 @@ export const createShift = async (req: AuthRequest, res: Response): Promise<void
       });
 
       if (conflicts.length > 0) {
-        res.status(409).json(errorResponse('Shift conflict', 'User already has a shift during this time'));
+        res
+          .status(409)
+          .json(
+            errorResponse(
+              "Shift conflict",
+              "User already has a shift during this time"
+            )
+          );
         return;
       }
     }
@@ -119,20 +170,27 @@ export const createShift = async (req: AuthRequest, res: Response): Promise<void
       },
     });
 
-    res.status(201).json(successResponse(shift, 'Shift created successfully'));
+    res.status(201).json(successResponse(shift, "Shift created successfully"));
   } catch (error) {
-    console.error('Create shift error:', error);
-    res.status(500).json(errorResponse('Failed to create shift', 'An error occurred'));
+    console.error("Create shift error:", error);
+    res
+      .status(500)
+      .json(errorResponse("Failed to create shift", "An error occurred"));
   }
 };
 
 /**
  * Get all shifts
  */
-export const getShifts = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getShifts = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
-      res.status(401).json(errorResponse('Not authenticated', 'Authentication required'));
+      res
+        .status(401)
+        .json(errorResponse("Not authenticated", "Authentication required"));
       return;
     }
 
@@ -204,7 +262,7 @@ export const getShifts = async (req: AuthRequest, res: Response): Promise<void> 
             },
           },
         },
-        orderBy: { startTime: 'asc' },
+        orderBy: { startTime: "asc" },
       }),
       prisma.shift.count({ where }),
     ]);
@@ -217,22 +275,29 @@ export const getShifts = async (req: AuthRequest, res: Response): Promise<void> 
           shifts,
           pagination,
         },
-        'Shifts retrieved successfully'
+        "Shifts retrieved successfully"
       )
     );
   } catch (error) {
-    console.error('Get shifts error:', error);
-    res.status(500).json(errorResponse('Failed to get shifts', 'An error occurred'));
+    console.error("Get shifts error:", error);
+    res
+      .status(500)
+      .json(errorResponse("Failed to get shifts", "An error occurred"));
   }
 };
 
 /**
  * Get shift by ID
  */
-export const getShiftById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getShiftById = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
-      res.status(401).json(errorResponse('Not authenticated', 'Authentication required'));
+      res
+        .status(401)
+        .json(errorResponse("Not authenticated", "Authentication required"));
       return;
     }
 
@@ -263,7 +328,9 @@ export const getShiftById = async (req: AuthRequest, res: Response): Promise<voi
     });
 
     if (!shift) {
-      res.status(404).json(errorResponse('Shift not found', 'Shift does not exist'));
+      res
+        .status(404)
+        .json(errorResponse("Shift not found", "Shift does not exist"));
       return;
     }
 
@@ -272,24 +339,35 @@ export const getShiftById = async (req: AuthRequest, res: Response): Promise<voi
       shift.roster.companyId !== req.user.companyId &&
       shift.assignedUserId !== req.user.id
     ) {
-      res.status(403).json(errorResponse('Access denied', 'You do not have access to this shift'));
+      res
+        .status(403)
+        .json(
+          errorResponse("Access denied", "You do not have access to this shift")
+        );
       return;
     }
 
-    res.json(successResponse(shift, 'Shift retrieved successfully'));
+    res.json(successResponse(shift, "Shift retrieved successfully"));
   } catch (error) {
-    console.error('Get shift error:', error);
-    res.status(500).json(errorResponse('Failed to get shift', 'An error occurred'));
+    console.error("Get shift error:", error);
+    res
+      .status(500)
+      .json(errorResponse("Failed to get shift", "An error occurred"));
   }
 };
 
 /**
  * Update shift
  */
-export const updateShift = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateShift = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
-      res.status(401).json(errorResponse('Not authenticated', 'Authentication required'));
+      res
+        .status(401)
+        .json(errorResponse("Not authenticated", "Authentication required"));
       return;
     }
 
@@ -305,13 +383,19 @@ export const updateShift = async (req: AuthRequest, res: Response): Promise<void
     });
 
     if (!existingShift) {
-      res.status(404).json(errorResponse('Shift not found', 'Shift does not exist'));
+      res
+        .status(404)
+        .json(errorResponse("Shift not found", "Shift does not exist"));
       return;
     }
 
     // Check access
     if (existingShift.roster.companyId !== req.user.companyId) {
-      res.status(403).json(errorResponse('Access denied', 'You do not have access to this shift'));
+      res
+        .status(403)
+        .json(
+          errorResponse("Access denied", "You do not have access to this shift")
+        );
       return;
     }
 
@@ -321,16 +405,31 @@ export const updateShift = async (req: AuthRequest, res: Response): Promise<void
       const end = new Date(updateData.endTime);
 
       if (!isValidDateRange(start, end)) {
-        res.status(400).json(errorResponse('Invalid time range', 'Start time must be before end time'));
+        res
+          .status(400)
+          .json(
+            errorResponse(
+              "Invalid time range",
+              "Start time must be before end time"
+            )
+          );
         return;
       }
     }
 
     // Check for conflicts if changing assigned user or times
-    if (updateData.assignedUserId || updateData.startTime || updateData.endTime) {
+    if (
+      updateData.assignedUserId ||
+      updateData.startTime ||
+      updateData.endTime
+    ) {
       const userId = updateData.assignedUserId || existingShift.assignedUserId;
-      const startTime = updateData.startTime ? new Date(updateData.startTime) : existingShift.startTime;
-      const endTime = updateData.endTime ? new Date(updateData.endTime) : existingShift.endTime;
+      const startTime = updateData.startTime
+        ? new Date(updateData.startTime)
+        : existingShift.startTime;
+      const endTime = updateData.endTime
+        ? new Date(updateData.endTime)
+        : existingShift.endTime;
 
       if (userId) {
         const conflicts = await prisma.shift.findMany({
@@ -340,20 +439,36 @@ export const updateShift = async (req: AuthRequest, res: Response): Promise<void
             status: { not: ShiftStatus.CANCELED },
             OR: [
               {
-                AND: [{ startTime: { lte: startTime } }, { endTime: { gt: startTime } }],
+                AND: [
+                  { startTime: { lte: startTime } },
+                  { endTime: { gt: startTime } },
+                ],
               },
               {
-                AND: [{ startTime: { lt: endTime } }, { endTime: { gte: endTime } }],
+                AND: [
+                  { startTime: { lt: endTime } },
+                  { endTime: { gte: endTime } },
+                ],
               },
               {
-                AND: [{ startTime: { gte: startTime } }, { endTime: { lte: endTime } }],
+                AND: [
+                  { startTime: { gte: startTime } },
+                  { endTime: { lte: endTime } },
+                ],
               },
             ],
           },
         });
 
         if (conflicts.length > 0) {
-          res.status(409).json(errorResponse('Shift conflict', 'User already has a shift during this time'));
+          res
+            .status(409)
+            .json(
+              errorResponse(
+                "Shift conflict",
+                "User already has a shift during this time"
+              )
+            );
           return;
         }
       }
@@ -382,20 +497,27 @@ export const updateShift = async (req: AuthRequest, res: Response): Promise<void
       },
     });
 
-    res.json(successResponse(shift, 'Shift updated successfully'));
+    res.json(successResponse(shift, "Shift updated successfully"));
   } catch (error) {
-    console.error('Update shift error:', error);
-    res.status(500).json(errorResponse('Failed to update shift', 'An error occurred'));
+    console.error("Update shift error:", error);
+    res
+      .status(500)
+      .json(errorResponse("Failed to update shift", "An error occurred"));
   }
 };
 
 /**
  * Delete shift
  */
-export const deleteShift = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteShift = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
-      res.status(401).json(errorResponse('Not authenticated', 'Authentication required'));
+      res
+        .status(401)
+        .json(errorResponse("Not authenticated", "Authentication required"));
       return;
     }
 
@@ -410,13 +532,22 @@ export const deleteShift = async (req: AuthRequest, res: Response): Promise<void
     });
 
     if (!shift) {
-      res.status(404).json(errorResponse('Shift not found', 'Shift does not exist'));
+      res
+        .status(404)
+        .json(errorResponse("Shift not found", "Shift does not exist"));
       return;
     }
 
     // Check access
-    if (req.user.role !== UserRole.SUPER_ADMIN && shift.roster.companyId !== req.user.companyId) {
-      res.status(403).json(errorResponse('Access denied', 'You do not have access to this shift'));
+    if (
+      req.user.role !== UserRole.ADMIN &&
+      shift.roster.companyId !== req.user.companyId
+    ) {
+      res
+        .status(403)
+        .json(
+          errorResponse("Access denied", "You do not have access to this shift")
+        );
       return;
     }
 
@@ -424,20 +555,27 @@ export const deleteShift = async (req: AuthRequest, res: Response): Promise<void
       where: { id },
     });
 
-    res.json(successResponse(null, 'Shift deleted successfully'));
+    res.json(successResponse(null, "Shift deleted successfully"));
   } catch (error) {
-    console.error('Delete shift error:', error);
-    res.status(500).json(errorResponse('Failed to delete shift', 'An error occurred'));
+    console.error("Delete shift error:", error);
+    res
+      .status(500)
+      .json(errorResponse("Failed to delete shift", "An error occurred"));
   }
 };
 
 /**
  * Assign user to shift
  */
-export const assignShift = async (req: AuthRequest, res: Response): Promise<void> => {
+export const assignShift = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
-      res.status(401).json(errorResponse('Not authenticated', 'Authentication required'));
+      res
+        .status(401)
+        .json(errorResponse("Not authenticated", "Authentication required"));
       return;
     }
 
@@ -453,13 +591,22 @@ export const assignShift = async (req: AuthRequest, res: Response): Promise<void
     });
 
     if (!shift) {
-      res.status(404).json(errorResponse('Shift not found', 'Shift does not exist'));
+      res
+        .status(404)
+        .json(errorResponse("Shift not found", "Shift does not exist"));
       return;
     }
 
     // Check access
-    if (req.user.role !== UserRole.SUPER_ADMIN && shift.roster.companyId !== req.user.companyId) {
-      res.status(403).json(errorResponse('Access denied', 'You do not have access to this shift'));
+    if (
+      req.user.role !== UserRole.ADMIN &&
+      shift.roster.companyId !== req.user.companyId
+    ) {
+      res
+        .status(403)
+        .json(
+          errorResponse("Access denied", "You do not have access to this shift")
+        );
       return;
     }
 
@@ -469,12 +616,21 @@ export const assignShift = async (req: AuthRequest, res: Response): Promise<void
     });
 
     if (!user) {
-      res.status(404).json(errorResponse('User not found', 'User does not exist'));
+      res
+        .status(404)
+        .json(errorResponse("User not found", "User does not exist"));
       return;
     }
 
     if (user.companyId !== shift.roster.companyId) {
-      res.status(400).json(errorResponse('Invalid user', 'User does not belong to the same company'));
+      res
+        .status(400)
+        .json(
+          errorResponse(
+            "Invalid user",
+            "User does not belong to the same company"
+          )
+        );
       return;
     }
 
@@ -486,20 +642,36 @@ export const assignShift = async (req: AuthRequest, res: Response): Promise<void
         status: { not: ShiftStatus.CANCELED },
         OR: [
           {
-            AND: [{ startTime: { lte: shift.startTime } }, { endTime: { gt: shift.startTime } }],
+            AND: [
+              { startTime: { lte: shift.startTime } },
+              { endTime: { gt: shift.startTime } },
+            ],
           },
           {
-            AND: [{ startTime: { lt: shift.endTime } }, { endTime: { gte: shift.endTime } }],
+            AND: [
+              { startTime: { lt: shift.endTime } },
+              { endTime: { gte: shift.endTime } },
+            ],
           },
           {
-            AND: [{ startTime: { gte: shift.startTime } }, { endTime: { lte: shift.endTime } }],
+            AND: [
+              { startTime: { gte: shift.startTime } },
+              { endTime: { lte: shift.endTime } },
+            ],
           },
         ],
       },
     });
 
     if (conflicts.length > 0) {
-      res.status(409).json(errorResponse('Shift conflict', 'User already has a shift during this time'));
+      res
+        .status(409)
+        .json(
+          errorResponse(
+            "Shift conflict",
+            "User already has a shift during this time"
+          )
+        );
       return;
     }
 
@@ -526,10 +698,11 @@ export const assignShift = async (req: AuthRequest, res: Response): Promise<void
       },
     });
 
-    res.json(successResponse(updatedShift, 'Shift assigned successfully'));
+    res.json(successResponse(updatedShift, "Shift assigned successfully"));
   } catch (error) {
-    console.error('Assign shift error:', error);
-    res.status(500).json(errorResponse('Failed to assign shift', 'An error occurred'));
+    console.error("Assign shift error:", error);
+    res
+      .status(500)
+      .json(errorResponse("Failed to assign shift", "An error occurred"));
   }
 };
-

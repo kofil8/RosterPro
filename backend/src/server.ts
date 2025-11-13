@@ -4,7 +4,6 @@ import express, { Application } from "express";
 import helmet from "helmet";
 import { createServer } from "http";
 import { connectRedis } from "./config/redis";
-// import { initializeSocketServer } from './socket/chat.socket';
 import { errorHandler, notFoundHandler } from "./middleware/error";
 import { apiLimiter } from "./middleware/rateLimiter";
 
@@ -35,14 +34,13 @@ app.use(
 
 // Body parser
 app.use(express.json());
-
 app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting
 app.use("/api", apiLimiter);
 
 // Health check endpoint
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
   res.json({
     status: "healthy",
     timestamp: new Date().toISOString(),
@@ -61,7 +59,7 @@ app.use("/api/payroll", payrollRoutes);
 app.use("/api/reports", reportsRoutes);
 
 // Root route
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.json({
     message: "Welcome to Roster & Payroll Management System API",
     version: "1.0.0",
@@ -74,9 +72,6 @@ app.use(notFoundHandler);
 
 // Error handler (must be last)
 app.use(errorHandler);
-
-// Initialize Socket.IO (optional for future chat features)
-// const io = initializeSocketServer(httpServer);
 
 // Start server
 const startServer = async () => {
@@ -93,7 +88,6 @@ const startServer = async () => {
       console.log(`📡 Server running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
       console.log(`🔗 API: http://localhost:${PORT}/api`);
-      console.log(`💬 WebSocket: http://localhost:${PORT}`);
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       console.log("");
     });
@@ -129,11 +123,6 @@ const gracefulShutdown = async () => {
   httpServer.close(() => {
     console.log("✅ HTTP server closed");
   });
-
-  // Close Socket.IO connections (if enabled)
-  // io.close(() => {
-  //   console.log('✅ Socket.IO connections closed');
-  // });
 
   process.exit(0);
 };

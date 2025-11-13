@@ -1,29 +1,35 @@
-import jwt from 'jsonwebtoken';
-import { JWTPayload } from '../types';
-import prisma from '../config/database';
-import { generateRandomString } from '../utils/helpers';
+import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
+import { JWTPayload } from "../types";
+import prisma from "../config/database";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
+// ENV Secrets
+const JWT_SECRET: Secret =
+  process.env.JWT_SECRET || "your-super-secret-jwt-key";
+const JWT_REFRESH_SECRET: Secret =
+  process.env.JWT_REFRESH_SECRET || "your-super-secret-refresh-key";
+const JWT_EXPIRES_IN = 15 * 60; // 15 minutes
+const JWT_REFRESH_EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days
 
 /**
  * Generate access token
  */
 export const generateAccessToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, JWT_SECRET, {
+  const options: SignOptions = {
     expiresIn: JWT_EXPIRES_IN,
-  });
+  };
+
+  return jwt.sign(payload, JWT_SECRET, options);
 };
 
 /**
  * Generate refresh token
  */
 export const generateRefreshToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, JWT_REFRESH_SECRET, {
+  const options: SignOptions = {
     expiresIn: JWT_REFRESH_EXPIRES_IN,
-  });
+  };
+
+  return jwt.sign(payload, JWT_REFRESH_SECRET, options);
 };
 
 /**
@@ -32,7 +38,7 @@ export const generateRefreshToken = (payload: JWTPayload): string => {
 export const verifyAccessToken = (token: string): JWTPayload | null => {
   try {
     return jwt.verify(token, JWT_SECRET) as JWTPayload;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -43,7 +49,7 @@ export const verifyAccessToken = (token: string): JWTPayload | null => {
 export const verifyRefreshToken = (token: string): JWTPayload | null => {
   try {
     return jwt.verify(token, JWT_REFRESH_SECRET) as JWTPayload;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -51,13 +57,16 @@ export const verifyRefreshToken = (token: string): JWTPayload | null => {
 /**
  * Store refresh token in database
  */
-export const storeRefreshToken = async (userId: string, token: string): Promise<void> => {
+export const storeRefreshToken = async (
+  userId: string,
+  token: string
+): Promise<void> => {
   const decoded = verifyRefreshToken(token);
   if (!decoded) {
-    throw new Error('Invalid refresh token');
+    throw new Error("Invalid refresh token");
   }
 
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Valid 7 days
 
   await prisma.refreshToken.create({
     data: {
@@ -69,7 +78,7 @@ export const storeRefreshToken = async (userId: string, token: string): Promise<
 };
 
 /**
- * Delete refresh token from database
+ * Delete single refresh token
  */
 export const deleteRefreshToken = async (token: string): Promise<void> => {
   await prisma.refreshToken.deleteMany({
@@ -78,7 +87,7 @@ export const deleteRefreshToken = async (token: string): Promise<void> => {
 };
 
 /**
- * Delete all refresh tokens for a user
+ * Delete all tokens for a user
  */
 export const deleteAllRefreshTokens = async (userId: string): Promise<void> => {
   await prisma.refreshToken.deleteMany({
@@ -87,18 +96,15 @@ export const deleteAllRefreshTokens = async (userId: string): Promise<void> => {
 };
 
 /**
- * Check if refresh token exists in database
+ * Check token validity in DB
  */
 export const isRefreshTokenValid = async (token: string): Promise<boolean> => {
   const refreshToken = await prisma.refreshToken.findUnique({
     where: { token },
   });
 
-  if (!refreshToken) {
-    return false;
-  }
+  if (!refreshToken) return false;
 
-  // Check if expired
   if (refreshToken.expiresAt < new Date()) {
     await deleteRefreshToken(token);
     return false;
@@ -108,7 +114,7 @@ export const isRefreshTokenValid = async (token: string): Promise<boolean> => {
 };
 
 /**
- * Clean up expired refresh tokens
+ * Cleanup expired tokens
  */
 export const cleanupExpiredTokens = async (): Promise<void> => {
   await prisma.refreshToken.deleteMany({
@@ -120,6 +126,5 @@ export const cleanupExpiredTokens = async (): Promise<void> => {
   });
 };
 
-// Schedule cleanup every hour
+// Run cleanup every hour
 setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
-

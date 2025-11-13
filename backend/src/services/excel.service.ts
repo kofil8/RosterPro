@@ -1,6 +1,6 @@
-import * as XLSX from 'xlsx';
-import { PrismaClient } from '@prisma/client';
-import { ExcelImportResult, PayrollExportData } from '../types';
+import * as XLSX from "xlsx";
+import { PrismaClient } from "@prisma/client";
+import { ExcelImportResult, PayrollExportData } from "../types";
 
 const prisma = new PrismaClient();
 
@@ -12,7 +12,7 @@ export const importEmployeesFromExcel = async (
   companyId: string
 ): Promise<ExcelImportResult> => {
   try {
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const workbook = XLSX.read(buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
@@ -27,7 +27,7 @@ export const importEmployeesFromExcel = async (
         await prisma.user.create({
           data: {
             email: row.email,
-            password: '$2b$10$defaultHashedPassword', // Default password, should be changed
+            password: "$2b$10$defaultHashedPassword", // Default password, should be changed
             firstName: row.firstName,
             lastName: row.lastName,
             phone: row.phone || null,
@@ -35,7 +35,7 @@ export const importEmployeesFromExcel = async (
             hourlyRate: row.hourlyRate ? parseFloat(row.hourlyRate) : 0,
             bankAccount: row.bankAccount || null,
             nationalInsuranceNumber: row.nationalInsuranceNumber || null,
-            role: 'EMPLOYEE',
+            role: "EMPLOYEE",
             companyId,
           },
         });
@@ -65,7 +65,9 @@ export const importEmployeesFromExcel = async (
 /**
  * Export employees to Excel file
  */
-export const exportEmployeesToExcel = async (companyId: string): Promise<Buffer> => {
+export const exportEmployeesToExcel = async (
+  companyId: string
+): Promise<Buffer> => {
   const employees = await prisma.user.findMany({
     where: { companyId },
     select: {
@@ -84,25 +86,24 @@ export const exportEmployeesToExcel = async (companyId: string): Promise<Buffer>
   });
 
   const data = employees.map((emp) => ({
-    'First Name': emp.firstName,
-    'Last Name': emp.lastName,
+    "First Name": emp.firstName,
+    "Last Name": emp.lastName,
     Email: emp.email,
-    Phone: emp.phone || '',
-    Address: emp.address || '',
+    Phone: emp.phone || "",
+    Address: emp.address || "",
     Role: emp.role,
-    'Hourly Rate (£)': Number(emp.hourlyRate).toFixed(2),
-    'Bank Account': emp.bankAccount || '',
-    'NI Number': emp.nationalInsuranceNumber || '',
-    Active: emp.isActive ? 'Yes' : 'No',
-    'Created Date': emp.createdAt.toISOString().split('T')[0],
+    "Hourly Rate (£)": Number(emp.hourlyRate).toFixed(2),
+    "Bank Account": emp.bankAccount || "",
+    "NI Number": emp.nationalInsuranceNumber || "",
+    Active: emp.isActive ? "Yes" : "No",
+    "Created Date": emp.createdAt.toISOString().split("T")[0],
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Employees');
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
 
   // Set column widths
-  const maxWidth = 20;
   const cols = [
     { wch: 15 }, // First Name
     { wch: 15 }, // Last Name
@@ -113,12 +114,12 @@ export const exportEmployeesToExcel = async (companyId: string): Promise<Buffer>
     { wch: 15 }, // Hourly Rate
     { wch: 20 }, // Bank Account
     { wch: 15 }, // NI Number
-    { wch: 8 },  // Active
+    { wch: 8 }, // Active
     { wch: 12 }, // Created Date
   ];
-  worksheet['!cols'] = cols;
+  worksheet["!cols"] = cols;
 
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 };
 
 /**
@@ -153,14 +154,14 @@ export const exportPayrollToExcel = async (
         },
       },
     },
-    orderBy: { periodStart: 'desc' },
+    orderBy: { periodStart: "desc" },
   });
 
   const data: PayrollExportData[] = payrolls.map((p) => ({
     employeeName: `${p.user.firstName} ${p.user.lastName}`,
     email: p.user.email,
-    periodStart: p.periodStart.toISOString().split('T')[0],
-    periodEnd: p.periodEnd.toISOString().split('T')[0],
+    periodStart: p.periodStart.toISOString().split("T")[0],
+    periodEnd: p.periodEnd.toISOString().split("T")[0],
     regularHours: Number(p.regularHours),
     overtimeHours: Number(p.overtimeHours),
     hourlyRate: Number(p.hourlyRate),
@@ -173,24 +174,24 @@ export const exportPayrollToExcel = async (
   }));
 
   const excelData = data.map((p) => ({
-    'Employee Name': p.employeeName,
+    "Employee Name": p.employeeName,
     Email: p.email,
-    'Period Start': p.periodStart,
-    'Period End': p.periodEnd,
-    'Regular Hours': p.regularHours.toFixed(2),
-    'Overtime Hours': p.overtimeHours.toFixed(2),
-    'Hourly Rate (£)': p.hourlyRate.toFixed(2),
-    'Regular Pay (£)': p.regularPay.toFixed(2),
-    'Overtime Pay (£)': p.overtimePay.toFixed(2),
-    'Bonuses (£)': p.bonuses.toFixed(2),
-    'Deductions (£)': p.deductions.toFixed(2),
-    'Net Pay (£)': p.netPay.toFixed(2),
+    "Period Start": p.periodStart,
+    "Period End": p.periodEnd,
+    "Regular Hours": p.regularHours.toFixed(2),
+    "Overtime Hours": p.overtimeHours.toFixed(2),
+    "Hourly Rate (£)": p.hourlyRate.toFixed(2),
+    "Regular Pay (£)": p.regularPay.toFixed(2),
+    "Overtime Pay (£)": p.overtimePay.toFixed(2),
+    "Bonuses (£)": p.bonuses.toFixed(2),
+    "Deductions (£)": p.deductions.toFixed(2),
+    "Net Pay (£)": p.netPay.toFixed(2),
     Status: p.status,
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Payroll Summary');
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Payroll Summary");
 
   // Set column widths
   const cols = [
@@ -208,7 +209,7 @@ export const exportPayrollToExcel = async (
     { wch: 15 }, // Net Pay
     { wch: 18 }, // Status
   ];
-  worksheet['!cols'] = cols;
+  worksheet["!cols"] = cols;
 
   // Add summary row
   const totalNetPay = data.reduce((sum, p) => sum + p.netPay, 0);
@@ -219,25 +220,25 @@ export const exportPayrollToExcel = async (
     worksheet,
     [
       {
-        'Employee Name': 'TOTAL',
-        Email: '',
-        'Period Start': '',
-        'Period End': '',
-        'Regular Hours': totalRegularHours.toFixed(2),
-        'Overtime Hours': totalOvertimeHours.toFixed(2),
-        'Hourly Rate (£)': '',
-        'Regular Pay (£)': '',
-        'Overtime Pay (£)': '',
-        'Bonuses (£)': '',
-        'Deductions (£)': '',
-        'Net Pay (£)': totalNetPay.toFixed(2),
-        Status: '',
+        "Employee Name": "TOTAL",
+        Email: "",
+        "Period Start": "",
+        "Period End": "",
+        "Regular Hours": totalRegularHours.toFixed(2),
+        "Overtime Hours": totalOvertimeHours.toFixed(2),
+        "Hourly Rate (£)": "",
+        "Regular Pay (£)": "",
+        "Overtime Pay (£)": "",
+        "Bonuses (£)": "",
+        "Deductions (£)": "",
+        "Net Pay (£)": totalNetPay.toFixed(2),
+        Status: "",
       },
     ],
     { origin: -1, skipHeader: true }
   );
 
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 };
 
 /**
@@ -248,7 +249,7 @@ export const importShiftsFromExcel = async (
   rosterId: string
 ): Promise<ExcelImportResult> => {
   try {
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const workbook = XLSX.read(buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
@@ -348,28 +349,28 @@ export const exportAttendanceToExcel = async (
         },
       },
     },
-    orderBy: { clockIn: 'desc' },
+    orderBy: { clockIn: "desc" },
   });
 
   const data = attendances.map((att) => ({
-    'Employee Name': `${att.user.firstName} ${att.user.lastName}`,
+    "Employee Name": `${att.user.firstName} ${att.user.lastName}`,
     Email: att.user.email,
-    'Shift Title': att.shift.title,
-    Location: att.shift.location || '',
-    'Client Name': att.shift.clientName || '',
-    'Clock In': att.clockIn.toISOString().replace('T', ' ').substring(0, 19),
-    'Clock Out': att.clockOut
-      ? att.clockOut.toISOString().replace('T', ' ').substring(0, 19)
-      : '',
-    'Total Hours': att.totalHours ? Number(att.totalHours).toFixed(2) : '',
-    'Break Duration': Number(att.breakDuration).toFixed(2),
+    "Shift Title": att.shift.title,
+    Location: att.shift.location || "",
+    "Client Name": att.shift.clientName || "",
+    "Clock In": att.clockIn.toISOString().replace("T", " ").substring(0, 19),
+    "Clock Out": att.clockOut
+      ? att.clockOut.toISOString().replace("T", " ").substring(0, 19)
+      : "",
+    "Total Hours": att.totalHours ? Number(att.totalHours).toFixed(2) : "",
+    "Break Duration": Number(att.breakDuration).toFixed(2),
     Status: att.status,
-    Notes: att.notes || '',
+    Notes: att.notes || "",
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Report');
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Report");
 
   // Set column widths
   const cols = [
@@ -385,8 +386,7 @@ export const exportAttendanceToExcel = async (
     { wch: 15 }, // Status
     { wch: 30 }, // Notes
   ];
-  worksheet['!cols'] = cols;
+  worksheet["!cols"] = cols;
 
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 };
-

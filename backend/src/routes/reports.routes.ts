@@ -26,7 +26,7 @@ router.get(
 // Import employees - Admin only
 router.post(
   "/employees/import",
-  authorize(["ADMIN"]),
+  authorize(UserRole.ADMIN),
   upload.single("file"),
   importEmployees
 );
@@ -34,21 +34,21 @@ router.post(
 // Export payroll - Admin/Manager/Accountant
 router.get(
   "/payroll/export",
-  authorize(["ADMIN", "MANAGER", "ACCOUNTANT"]),
+  authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.ACCOUNTANT),
   exportPayroll
 );
 
 // Export attendance - Admin/Manager/Accountant
 router.get(
   "/attendance/export",
-  authorize(["ADMIN", "MANAGER", "ACCOUNTANT"]),
+  authorize(UserRole.ADMIN, UserRole.MANAGER, UserRole.ACCOUNTANT),
   exportAttendance
 );
 
 // Import shifts - Admin/Manager
 router.post(
   "/shifts/import",
-  authorize(["ADMIN", "MANAGER"]),
+  authorize(UserRole.ADMIN, UserRole.MANAGER),
   upload.single("file"),
   importShifts
 );

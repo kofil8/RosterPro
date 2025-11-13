@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import { authenticate, authorize } from '../middleware/auth';
+import { Router } from "express";
+import { authenticate, authorize } from "../middleware/auth";
 import {
   createPayroll,
   getPayrolls,
@@ -8,7 +8,8 @@ import {
   deletePayroll,
   generatePayroll,
   approvePayroll,
-} from '../controllers/payroll.controller';
+} from "../controllers/payroll.controller";
+import { UserRole } from "@prisma/client";
 
 const router = Router();
 
@@ -16,25 +17,36 @@ const router = Router();
 router.use(authenticate);
 
 // Create payroll - Admin/Accountant only
-router.post('/', authorize(['ADMIN', 'ACCOUNTANT']), createPayroll);
+router.post("/", authorize(UserRole.ADMIN, UserRole.ACCOUNTANT), createPayroll);
 
 // Generate payroll from attendance - Admin/Accountant only
-router.post('/generate', authorize(['ADMIN', 'ACCOUNTANT']), generatePayroll);
+router.post(
+  "/generate",
+  authorize(UserRole.ADMIN, UserRole.ACCOUNTANT),
+  generatePayroll
+);
 
 // Get all payroll records - Role-based access
-router.get('/', getPayrolls);
+router.get("/", getPayrolls);
 
 // Get single payroll record
-router.get('/:id', getPayrollById);
+router.get("/:id", getPayrollById);
 
 // Update payroll - Admin/Accountant only
-router.patch('/:id', authorize(['ADMIN', 'ACCOUNTANT']), updatePayroll);
+router.patch(
+  "/:id",
+  authorize(UserRole.ADMIN, UserRole.ACCOUNTANT),
+  updatePayroll
+);
 
 // Delete payroll - Admin only
-router.delete('/:id', authorize(['ADMIN']), deletePayroll);
+router.delete("/:id", authorize(UserRole.ADMIN), deletePayroll);
 
 // Approve payroll - Manager/Admin only
-router.post('/:id/approve', authorize(['ADMIN', 'MANAGER']), approvePayroll);
+router.post(
+  "/:id/approve",
+  authorize(UserRole.ADMIN, UserRole.MANAGER),
+  approvePayroll
+);
 
 export default router;
-
